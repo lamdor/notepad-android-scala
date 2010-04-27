@@ -2,7 +2,7 @@ package eg.notepad
 
 import _root_.android.app.ListActivity
 import _root_.android.os.Bundle
-import _root_.android.widget.TextView
+import _root_.android.widget.{ TextView, SimpleCursorAdapter }
 import _root_.android.view.{ Menu, MenuItem }
 
 object NotepadMenu {
@@ -12,6 +12,7 @@ object NotepadMenu {
 class Notepad extends ListActivity {
 
   val dbHelper = new NotesDbAdapter(this)
+  var noteNumber = 1
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
@@ -32,14 +33,25 @@ class Notepad extends ListActivity {
         createNote()
         true
       }
-      case _ => false
+      case _ => super.onOptionsItemSelected(item)
     }
   }
 
   private def createNote() {
+    val noteName = "Note " + noteNumber
+    noteNumber += 1
+    fillData()
   }
 
   private def fillData() {
+    val c = dbHelper.fetchAllNotes
+    startManagingCursor(c)
+
+    val from = Array(NotesDbSchema.KEY_TITLE)
+    val to = Array(R.id.text1)
+
+    val notes = new SimpleCursorAdapter(this, R.layout.notes_row, c, from, to)
+    setListAdapter(notes)
   }
 
 }
