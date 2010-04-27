@@ -40,6 +40,7 @@ class Notepad extends ListActivity {
   private def createNote() {
     val noteName = "Note " + noteNumber
     noteNumber += 1
+    dbHelper.createNote(noteName, "")
     fillData()
   }
 
