@@ -34,6 +34,10 @@ class NotesDbAdapter(val ctx: Context) {
   lazy val dbHelper = new DatabaseHelper(ctx)
   lazy val db = dbHelper.getWritableDatabase
 
+  def open {
+    dbHelper
+  }
+
   def open(f: (SQLiteDatabase) => Unit) {
     f(db)
     dbHelper.close
