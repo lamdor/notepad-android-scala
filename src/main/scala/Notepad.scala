@@ -3,8 +3,8 @@ package eg.notepad
 import _root_.android.app.ListActivity
 import _root_.android.os.Bundle
 import _root_.android.database.Cursor
-import _root_.android.widget.{ TextView, SimpleCursorAdapter }
-import _root_.android.view.{ Menu, MenuItem }
+import _root_.android.widget.{ TextView, SimpleCursorAdapter, AdapterView }
+import _root_.android.view.{ Menu, MenuItem, ContextMenu, View }
 
 object NotepadMenu {
   val INSERT_ID = Menu.FIRST
@@ -26,6 +26,7 @@ class Notepad extends ListActivity {
     setContentView(R.layout.notes_list)
     dbHelper.open
     fillData
+    registerForContextMenu(getListView)
   }
 
   override def onCreateOptionsMenu(menu: Menu) = {
@@ -41,6 +42,24 @@ class Notepad extends ListActivity {
         true
       }
       case _ => super.onOptionsItemSelected(item)
+    }
+  }
+
+  override def onCreateContextMenu(menu: ContextMenu, view: View, menuInfo: ContextMenu.ContextMenuInfo) = {
+    val result = super.onCreateContextMenu(menu, view, menuInfo)
+    menu.add(0, NotepadMenu.DELETE_ID, 0, R.string.menu_delete)
+    result
+  }
+
+  override def onContextItemSelected(item: MenuItem) = {
+    item.getItemId match {
+      case NotepadMenu.DELETE_ID => {
+        val info = item.getMenuInfo.asInstanceOf[AdapterView.AdapterContextMenuInfo]
+        dbHelper.deleteNote(info.id)
+        fillData
+        true
+      }
+      case _ => super.onContextItemSelected(item)
     }
   }
 
