@@ -2,21 +2,28 @@ package eg.notepad
 
 import _root_.android.app.ListActivity
 import _root_.android.os.Bundle
+import _root_.android.database.Cursor
 import _root_.android.widget.{ TextView, SimpleCursorAdapter }
 import _root_.android.view.{ Menu, MenuItem }
 
 object NotepadMenu {
   val INSERT_ID = Menu.FIRST
+  val DELETE_ID = Menu.FIRST + 1
+}
+
+object NotepadActivities {
+  val ACTIVITY_CREATE = 0
+  val ACTIVITY_EDIT = 1
 }
 
 class Notepad extends ListActivity {
 
+  var currentNotesCursor: Cursor = _
   val dbHelper = new NotesDbAdapter(this)
-  var noteNumber = 1
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
-    setContentView(R.layout.notepad_list)
+    setContentView(R.layout.notes_list)
     dbHelper.open
     fillData
   }
@@ -38,20 +45,16 @@ class Notepad extends ListActivity {
   }
 
   private def createNote() {
-    val noteName = "Note " + noteNumber
-    noteNumber += 1
-    dbHelper.createNote(noteName, "")
-    fillData()
   }
 
   private def fillData() {
-    val c = dbHelper.fetchAllNotes
-    startManagingCursor(c)
+    currentNotesCursor = dbHelper.fetchAllNotes
+    startManagingCursor(currentNotesCursor)
 
     val from = Array(NotesDbSchema.KEY_TITLE)
     val to = Array(R.id.text1)
 
-    val notes = new SimpleCursorAdapter(this, R.layout.notes_row, c, from, to)
+    val notes = new SimpleCursorAdapter(this, R.layout.notes_row, currentNotesCursor, from, to)
     setListAdapter(notes)
   }
 
