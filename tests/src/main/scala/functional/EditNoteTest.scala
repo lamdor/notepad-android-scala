@@ -1,7 +1,6 @@
 package functional
 
 import junit.framework.Assert._
-import android.os.Bundle
 
 class EditNoteTest extends FunctionalTest {
 
