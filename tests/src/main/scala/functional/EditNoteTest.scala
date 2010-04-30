@@ -15,4 +15,10 @@ class EditNoteTest extends FunctionalTest {
     assertTrue(solo.searchText("editted"))
   }
 
+  def testEditNoteAndGoBack() {
+    addNote("Edit Me", "changeme")
+    solo.clickOnText("Edit Me")
+    solo.goBack
+    assertTrue(solo.searchText("Edit Me"))
+  }
 }
