@@ -19,46 +19,78 @@ object NotepadActivities {
 }
 
 class NoteEdit extends Activity {
+  var currentNotesCursor: Cursor = _
+  val dbHelper = new NotesDbAdapter(this)
+  var rowId: Long = -1
+
+  lazy val titleText = findViewById(R.id.title).asInstanceOf[EditText]
+  lazy val bodyText = findViewById(R.id.body).asInstanceOf[EditText]
+  lazy val confirmButton = findViewById(R.id.confirm).asInstanceOf[Button]
+
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.note_edit)
+    dbHelper.open
 
-    val titleText = findViewById(R.id.title).asInstanceOf[EditText]
-    val bodyText = findViewById(R.id.body).asInstanceOf[EditText]
-    val confirmButton = findViewById(R.id.confirm).asInstanceOf[Button]
-
-    val extras = getIntent().getExtras
-    var rowId: Long = 0
-
-    if (extras != null) {
-      val title = extras.getString(NotesDbSchema.KEY_TITLE)
-      val body = extras.getString(NotesDbSchema.KEY_BODY)
-      rowId = extras.getLong(NotesDbSchema.KEY_ROW_ID)
-
-      if (title != null) titleText.setText(title)
-      if (body != null) bodyText.setText(body)
+    if (savedInstanceState != null) {
+      savedInstanceState.getLong(NotesDbSchema.KEY_ROW_ID)
     }
+
+    if (rowId == -1) {
+      val extras = getIntent().getExtras
+      if (extras != null) {
+        rowId = extras.getLong(NotesDbSchema.KEY_ROW_ID)
+      }
+    }
+
+    populateFields()
 
     confirmButton.setOnClickListener(new View.OnClickListener {
       override def onClick(view: View) {
-        val bundle = new Bundle
-        bundle.putString(NotesDbSchema.KEY_TITLE, titleText.getText.toString)
-        bundle.putString(NotesDbSchema.KEY_BODY, bodyText.getText.toString)
-        bundle.putLong(NotesDbSchema.KEY_ROW_ID, rowId)
-
-        val i = new Intent
-        i.putExtras(bundle)
-        setResult(Activity.RESULT_OK, i)
+        setResult(Activity.RESULT_OK)
         finish()
       }
     })
-
   }
+
+  override def onSaveInstanceState(outState: Bundle) {
+    super.onSaveInstanceState(outState)
+    outState.putLong(NotesDbSchema.KEY_ROW_ID, rowId)
+  }
+
+  override def onPause() {
+    super.onPause()
+    saveState()
+  }
+
+  override def onResume() {
+    super.onResume()
+    populateFields()
+  }
+
+  private def populateFields() {
+    if (rowId != -1) {
+      val noteCursor = dbHelper.fetchNote(rowId)
+      startManagingCursor(noteCursor)
+      titleText.setText(noteCursor.getString(noteCursor.getColumnIndexOrThrow(NotesDbSchema.KEY_TITLE)))
+      bodyText.setText(noteCursor.getString(noteCursor.getColumnIndexOrThrow(NotesDbSchema.KEY_BODY)))
+    }
+  }
+
+  private def saveState() {
+    val title = titleText.getText.toString
+    val body = bodyText.getText.toString
+    if (rowId == -1) {
+      rowId = dbHelper.createNote(title, body)
+    } else {
+      dbHelper.updateNote(rowId, title, body)
+    }
+  }
+
 }
 
 class Notepad extends ListActivity {
 
-  var currentNotesCursor: Cursor = _
   val dbHelper = new NotesDbAdapter(this)
 
   override def onCreate(savedInstanceState: Bundle) {
@@ -105,30 +137,13 @@ class Notepad extends ListActivity {
 
   override def onListItemClick(listView: ListView, view: View, position: Int, id: Long) {
     super.onListItemClick(listView, view, position, id)
-    val c = currentNotesCursor
-    c.moveToPosition(position)
     val intent = new Intent(this, classOf[NoteEdit])
     intent.putExtra(NotesDbSchema.KEY_ROW_ID, id)
-    intent.putExtra(NotesDbSchema.KEY_TITLE, c.getString(c.getColumnIndexOrThrow(NotesDbSchema.KEY_TITLE)))
-    intent.putExtra(NotesDbSchema.KEY_BODY, c.getString(c.getColumnIndexOrThrow(NotesDbSchema.KEY_BODY)))
     startActivityForResult(intent, NotepadActivities.ACTIVITY_EDIT)
   }
 
   override def onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
     super.onActivityResult(resultCode, resultCode, data)
-    val extras = data.getExtras
-
-    val title = extras.getString(NotesDbSchema.KEY_TITLE)
-    val body = extras.getString(NotesDbSchema.KEY_BODY)
-
-    requestCode match {
-      case NotepadActivities.ACTIVITY_CREATE =>
-        dbHelper.createNote(title, body)
-      case NotepadActivities.ACTIVITY_EDIT =>
-        val id = extras.getLong(NotesDbSchema.KEY_ROW_ID)
-        dbHelper.updateNote(id, title, body)
-    }
-
     fillData
   }
 
@@ -138,7 +153,7 @@ class Notepad extends ListActivity {
   }
 
   private def fillData() {
-    currentNotesCursor = dbHelper.fetchAllNotes
+    val currentNotesCursor = dbHelper.fetchAllNotes
     startManagingCursor(currentNotesCursor)
 
     val from = Array(NotesDbSchema.KEY_TITLE)
